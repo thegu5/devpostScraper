@@ -5,7 +5,7 @@ from time import gmtime, strftime
 from tqdm import tqdm
 
 # This is the hackathon's identifier that can be found in the url
-print("Enter the hackathon id (the devpost subdomain: ")
+print("Hackathon id (the devpost subdomain)")
 hackathon_name = input("> ")
 
 # DO NOT EDIT BELOW THIS LINE
