@@ -5,7 +5,8 @@ from time import gmtime, strftime
 from tqdm import tqdm
 
 # This is the hackathon's identifier that can be found in the url
-hackathon_name = "bay-area-hacks-society"
+print("Enter the hackathon id (the devpost subdomain: ")
+hackathon_name = input("> ")
 
 # DO NOT EDIT BELOW THIS LINE
 hackathon_url = f"https://{hackathon_name}.devpost.com/project-gallery"
@@ -20,6 +21,7 @@ last_page = int(last_page_link.text)
 
 # Scrape projects on each page
 projects = []
+users = []
 for page in tqdm(range(1, last_page + 1), desc="Scraping project pages", unit="pages"):
     url = f"{hackathon_url}?page={page}"
     response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -29,6 +31,7 @@ for page in tqdm(range(1, last_page + 1), desc="Scraping project pages", unit="p
         project_name = project_div.find("h5").text.strip()
         creators = project_div.find_all("img", class_="user-photo")
         creators_names = [creator["title"] for creator in creators]
+        users += creators_names
         project_url = project_div.parent["href"]
         projects.append({"name": project_name, "creators": creators_names, "url": project_url})
 
@@ -57,9 +60,26 @@ for project in tqdm(projects, desc="Scraping project details", unit="projects"):
         project["description"] = container[-1].get_text()
 
 for project in projects:
-    if "hackathons" in project:
-        project["hackathons"] = list(filter(None, project["hackathons"]))
+    project["hackathons"] = list(filter(None, project["hackathons"]))
 
+for user in tqdm(users, desc="Scraping user details", unit="users"):
+    if user == "":
+        continue
+    url = f"https://devpost.com/{user}"
+    response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+    soup = BeautifulSoup(response.text, "html.parser")
+    user_projects = soup.find_all("a", {"class": "block-wrapper-link fade link-to-software"})
+    user = {"name": user, "url": url, "projects": []}
+    for project in user_projects:
+        user["projects"].append({
+            "name": project.find("h5").text.strip(),
+            "url": project["href"]
+        })
+    # replace the user's name with the user object
+    users[users.index(user["name"])] = user
+    # TODO: take into account user page pagination
+
+data = {"projects": projects, "users": users}
 timenow = strftime("%Y-%m-%d-%H:%M:%S", gmtime())
 with open(f"{hackathon_name}-{timenow}.json", "w") as f:
-    json.dump(projects, f, indent=4)
+    json.dump(data, f, indent=4)
